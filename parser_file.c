@@ -1,12 +1,11 @@
 /**
  * file:    parser_file.c
  * author:  wallying@foxmail.com
- * date:    2019-12-26
+ * date:    2019-12-27
  **/
 
 
 #include <stdio.h>
-#include <ctype.h>
 #include <string.h>
 #include "parser_file.h"
 
@@ -14,67 +13,82 @@
 #define LINE_STR_NUM_MAX (1024)
 
 
-int parser_file(const char *name)
-{
-    fileInfo_t srcFile = {0x00};
-    char label = '\0';
-    char lineStr[LINE_STR_NUM_MAX] = {0x00};
-    unsigned int lineNum = 0;
-    unsigned int lineLen = 0;
-    char keyBuf[LINE_STR_NUM_MAX] = {0x00};
+#define isspace(c) \
+    (((c) == ' ')  || ((c) == '\n') || ((c) == '\t') || \
+     ((c) == '\r') || ((c) == '\f') || ((c) == '\v'))
 
-    memset(&srcFile, 0x00, sizeof(srcFile));
+static char *str_trim(char *str)
+{
+    char *ptr = str;
+    char *end = str;
+
+    while ((isspace(*ptr))) {
+        ++ptr;
+    }
+
+    if (ptr == str) {
+        for (; *end; ++end);
+    } else {
+        for (; (*end = *ptr); ++end, ++ptr);
+    }
+
+    do {
+        --end;
+    } while ((end >= str) && (isspace(*end)));
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+
+int parser_line(char *str, lineInfo_t *line)
+{
+//    if ((lineStr[0] == ';') || (lineStr[0] == '#')) {
+//        /* comment */
+//        sscanf(lineStr, "[%[^]]", secBuf);
+//    } else if ((lineStr[0] == '[') && (lineStr[lineLen-1] == ']')) {
+//        /* section */
+//        printf("%s", lineStr);
+//    }
+    return 0;
+}
+
+
+int parser_file(const char *name, fileInfo_t *file)
+{
+    lineInfo_t oneLine = {0x00};
+    char lineStr[LINE_STR_NUM_MAX] = {0x00};
+    unsigned int lineLen = 0;
 
     /*========================================================================*/
-    strncpy(srcFile.name, name, sizeof(srcFile.name));
-    if ((srcFile.fp = fopen(srcFile.name, "r")) == NULL) {
-        printf(" ERROR: no \"%s\" file!!!\n", srcFile.name);
+    strncpy(file->name, name, sizeof(file->name));
+    if ((file->fp = fopen(file->name, "r")) == NULL) {
+        printf(" ERROR: no \"%s\" file!!!\n", file->name);
         return -1;
     }
 
-    fseek(srcFile.fp, 0L, SEEK_END);
-    srcFile.len = ftell(srcFile.fp);
-    fseek(srcFile.fp, 0L, SEEK_SET);
+    fseek(file->fp, 0L, SEEK_END);
+    file->len = ftell(file->fp);
+    fseek(file->fp, 0L, SEEK_SET);
 
-    lineNum = 0;
-    while (fgets(lineStr, sizeof(lineStr), srcFile.fp) != NULL) {
-        ++lineNum;
+    file->line = 0;
+    while (fgets(lineStr, sizeof(lineStr), file->fp) != NULL) {
+        ++file->line;
         lineLen = strlen(lineStr);
-        if (lineStr[lineLen-1] != '\n' && !feof(srcFile.fp)) {
-            printf(" ERROR: file:%s line:%d too long!!!\n", srcFile.name, lineNum);
+        if (lineStr[lineLen-1] != '\n' && !feof(file->fp)) {
+            printf(" ERROR: file:%s line:%d too long!!!\n", file->name, file->line);
         }
 
-        sscanf(lineStr, "%*[ \t\n]%s", keyBuf);
+        str_trim(lineStr);
+        lineLen = strlen(lineStr);
 
-        switch (label) {
-        case ' ':
-        case '\t':
-        case '\n':
-            break;
-
-        case ';': /* comment */
-        case '#': /* comment */
-        default:
-            printf("%s", lineStr);
-            break;
-        }
+        parser_line(lineStr, &oneLine);
+        printf("[%s:%s=%s]\n", oneLine.sec, oneLine.key, oneLine.val);
     }
 
-    fclose(srcFile.fp);
+    fclose(file->fp);
 
-    /*========================================================================*/
-    printf("\n srcFile => \"%s\" %.2fKB(%ld-byte)\n",
-           srcFile.name, srcFile.len / 1024.0, srcFile.len);
-
-   return 0;
+    return 0;
 }
 
 
-void strtrim(char *str)
-{
-    char *ptr = str;
-
-    if (isspace(*ptr)) {
-
-    }
-}
