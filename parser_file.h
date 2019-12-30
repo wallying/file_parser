@@ -17,6 +17,14 @@ typedef struct {
     /* other info for file */
 } fileInfo_t;
 
+typedef enum {
+    LINE_ERROR,
+    LINE_EMPTY,
+    LINE_COMMENT,
+    LINE_SECTION,
+    LINE_KEYVALUE,
+} lineType_e;
+
 typedef struct {
     char sec[128];
     char key[128];

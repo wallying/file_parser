@@ -1,7 +1,7 @@
 /**
  * file:    parser_file.c
  * author:  wallying@foxmail.com
- * date:    2019-12-27
+ * date:    2019-12-30
  **/
 
 
@@ -43,14 +43,33 @@ static char *str_trim(char *str)
 
 int parser_line(char *str, lineInfo_t *line)
 {
-//    if ((lineStr[0] == ';') || (lineStr[0] == '#')) {
-//        /* comment */
-//        sscanf(lineStr, "[%[^]]", secBuf);
-//    } else if ((lineStr[0] == '[') && (lineStr[lineLen-1] == ']')) {
-//        /* section */
-//        printf("%s", lineStr);
-//    }
-    return 0;
+    lineType_e ret = LINE_ERROR;
+    unsigned int len = 0;
+
+    str_trim(str);
+    len = strlen(str);
+
+    if (str[0] == '\0') {
+        /* empty */
+        ret = LINE_EMPTY;
+    } else if ((str[0] == ';') || (str[0] == '#')) {
+        /* comment */
+        ret = LINE_COMMENT;
+    } else if ((str[0] == '[') && (str[len - 1] == ']')) {
+        /* section */
+        sscanf(str, "[%[^]]", line->sec);
+        str_trim(line->sec);
+        ret = LINE_SECTION;
+    } else if (sscanf(str, "%[^=]=%[^;#]", line->key, line->val) == 2) {
+        /* key & value */
+        str_trim(line->key);
+        str_trim(line->val);
+        ret = LINE_KEYVALUE;
+    } else {
+        ret = LINE_ERROR;
+    }
+
+    return ret;
 }
 
 
@@ -75,15 +94,22 @@ int parser_file(const char *name, fileInfo_t *file)
     while (fgets(lineStr, sizeof(lineStr), file->fp) != NULL) {
         ++file->line;
         lineLen = strlen(lineStr);
-        if (lineStr[lineLen-1] != '\n' && !feof(file->fp)) {
+        if (lineStr[lineLen - 1] != '\n' && !feof(file->fp)) {
             printf(" ERROR: file:%s line:%d too long!!!\n", file->name, file->line);
         }
 
-        str_trim(lineStr);
-        lineLen = strlen(lineStr);
-
-        parser_line(lineStr, &oneLine);
-        printf("[%s:%s=%s]\n", oneLine.sec, oneLine.key, oneLine.val);
+        switch (parser_line(lineStr, &oneLine)) {
+        case LINE_EMPTY:
+        case LINE_COMMENT:
+            break;
+        case LINE_SECTION:
+            break;
+        case LINE_KEYVALUE:
+            printf("[%s:%s=%s]\n", oneLine.sec, oneLine.key, oneLine.val);
+            break;
+        default:
+            break;
+        }
     }
 
     fclose(file->fp);
